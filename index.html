@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Health is Wealth App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-green: #27ae60;
+            --primary-blue: #2980b9;
+            --accent-orange: #f39c12;
+            --danger-red: #e74c3c;
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            color: var(--text-main);
+            margin: 0; padding: 10px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .container { width: 100%; max-width: 480px; margin-bottom: 50px; }
+        .logo-container { text-align: center; padding: 10px 0; }
+        .logo-container h2 { color: var(--primary-green); margin: 0; }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border-top: 5px solid var(--primary-green);
+        }
+
+        label {
+            display: block; font-weight: 700; font-size: 11px;
+            margin-bottom: 5px; color: var(--primary-blue); text-transform: uppercase;
+        }
+
+        .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        input, select, textarea {
+            width: 100%; padding: 12px; border: 2px solid #edf2f7;
+            border-radius: 12px; font-size: 15px; background: #f8fafc; box-sizing: border-box;
+        }
+
+        .other-input { display: none; border-color: var(--accent-orange); background: #fffaf0; margin-bottom: 12px; }
+
+        .mic-btn {
+            background: #f8fafc; border: 2px solid #edf2f7; border-radius: 12px;
+            cursor: pointer; padding: 0 12px; font-size: 18px; min-width: 50px;
+        }
+
+        .mic-btn.listening { background: var(--danger-red); color: white; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        button.action { border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .save-btn { background: var(--primary-green); color: white; }
+        .fetch-btn { background: #cbd5e0; color: #4a5568; }
+
+        .search-box {
+            width: 100%; padding: 12px; border-radius: 12px; border: 2px solid var(--primary-blue);
+            margin: 10px 0; font-size: 14px; background: white;
+        }
+
+        .visit-card {
+            background: white; border-radius: 15px; padding: 20px;
+            margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 8px solid var(--accent-orange);
+            width: 90%; margin: 15px auto; position: relative;
+        }
+
+        .card-controls {
+            display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid #f7fafc; padding-top: 10px;
+        }
+
+        .control-btn {
+            border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600;
+        }
+        .edit-btn { background: #ebf8ff; color: var(--primary-blue); }
+        .del-btn { background: #fff5f5; color: var(--danger-red); }
+
+        .tag { font-size: 10px; background: #ebf8ff; color: #2b6cb0; padding: 3px 8px; border-radius: 5px; text-transform: uppercase; }
+        #syncStatus { text-align: center; font-size: 12px; margin-top: 10px; color: var(--primary-green); font-weight: bold; }
+        #captureArea { position: absolute; left: -9999px; width: 400px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo-container"><h2>HEALTH IS WEALTH</h2></div>
+
+    <div class="card" id="mainForm">
+        <input type="hidden" id="editIndex" value="-1">
+        
+        <label>Visit Date</label>
+        <input type="date" id="visitDate" style="margin-bottom:12px;">
+
+        <label>Doctor's Name</label>
+        <div class="input-row">
+            <input type="text" id="drName" placeholder="Attending Doctor">
+            <button class="mic-btn" onclick="runSpeech('drName')">🎤</button>
+        </div>
+
+        <label>Category</label>
+        <select id="categorySelect" onchange="handleCategoryChange()" style="margin-bottom:12px;"></select>
+        <div class="input-row" id="rowOtherCat" style="display:none;">
+            <input type="text" id="otherCategoryInput" class="other-input" style="display:block;" placeholder="Type Custom Category">
+            <button class="mic-btn" onclick="runSpeech('otherCategoryInput')">🎤</button>
+        </div>
+
+        <label>Problem / Illness</label>
+        <select id="illnessSelect" onchange="handleIllnessChange()" style="margin-bottom:12px;"></select>
+        <div class="input-row" id="rowOtherIll" style="display:none;">
+            <input type="text" id="otherIllnessInput" class="other-input" style="display:block;" placeholder="Type Custom Problem">
+            <button class="mic-btn" onclick="runSpeech('otherIllnessInput')">🎤</button>
+        </div>
+
+        <label>Medication Given</label>
+        <div class="input-row">
+            <input type="text" id="medicine" placeholder="e.g. Paracetamol">
+            <button class="mic-btn" onclick="runSpeech('medicine')">🎤</button>
+        </div>
+
+        <label>Notes</label>
+        <div class="input-row">
+            <textarea id="notes" rows="2" placeholder="Advice..."></textarea>
+            <button class="mic-btn" onclick="runSpeech('notes')">🎤</button>
+        </div>
+
+        <div class="action-btns">
+            <button class="action save-btn" id="btnMain" onclick="saveAndShare()">Save & Share 📤</button>
+            <button class="action fetch-btn" onclick="clearForm()">Clear 🗑️</button>
+        </div>
+        <div id="syncStatus"></div>
+    </div>
+
+    <h3 style="padding-left:10px;">Visit History</h3>
+    <input type="text" id="searchBar" class="search-box" placeholder="🔍 Search Illness, Meds, or Doctor..." onkeyup="filterHistory()">
+    
+    <div id="visitHistory"></div>
+</div>
+
+<div id="captureArea"></div>
+
+<script>
+    const medicalData = {
+        "General / Infection": ["Fever", "Viral Fever", "Bacterial Infection", "Cold", "Cough", "Cold & Cough", "Sore Throat", "Flu (Influenza)", "COVID-like symptoms", "Body Ache", "Fatigue / Weakness"],
+        "Pain & Injury": ["Headache", "Migraine", "Back Pain", "Neck Pain", "Shoulder Pain", "Knee Pain", "Joint Pain", "Muscle Pain", "Injury / Trauma", "Sprain / Strain"],
+        "Heart / BP": ["High Blood Pressure (Hypertension)", "Low Blood Pressure", "Chest Pain", "Palpitations", "Heart Check-up (Routine)"],
+        "Digestive System": ["Stomach Pain", "Acidity / GERD", "Indigestion", "Gas / Bloating", "Diarrhea", "Constipation", "Vomiting", "Food Poisoning", "Liver Problem"],
+        "Diabetes / Metabolic": ["Diabetes – Routine Check", "High Sugar Level", "Low Sugar Level", "Thyroid Disorder", "Cholesterol Problem", "Obesity / Weight Issue"],
+        "Respiratory": ["Asthma", "Breathing Difficulty", "Bronchitis", "Pneumonia"],
+        "Neurological": ["Anxiety", "Stress", "Depression", "Sleep Disorder (Insomnia)", "Dizziness", "Vertigo", "Memory Issues"],
+        "Bone / Ortho": ["Arthritis", "Osteoporosis", "Fracture", "Slip Disc", "Sciatica", "Bone Pain"],
+        "Skin / Hair": ["Skin Allergy", "Rashes", "Itching", "Fungal Infection", "Acne", "Hair Fall", "Dandruff", "Psoriasis", "Eczema"],
+        "Eye / ENT": ["Eye Infection", "Eye Pain", "Vision Problem", "Ear Pain", "Ear Infection", "Hearing Issue", "Sinusitis", "Tonsillitis"],
+        "Urinary / Kidney": ["Urinary Tract Infection (UTI)", "Burning Urination", "Kidney Stone", "Frequent Urination", "Prostate Issue"],
+        "Men / Women": ["Menstrual Pain", "Irregular Periods", "PCOD / PCOS", "Pregnancy Check-up", "Menopause Issues", "Erectile Dysfunction", "Hormonal Issue"],
+        "Routine": ["General Check-up", "Blood Test Review", "X-ray / Scan Review", "Vaccination", "Medical Certificate", "Fitness Check"],
+        "Other": ["Other"]
+    };
+
+    window.onload = () => {
+        document.getElementById('visitDate').valueAsDate = new Date();
+        const catSelect = document.getElementById('categorySelect');
+        catSelect.add(new Option("-- Select Category --", ""));
+        Object.keys(medicalData).forEach(cat => catSelect.add(new Option(cat, cat)));
+        fetchHistory();
+    };
+
+    function handleCategoryChange() {
+        const val = document.getElementById('categorySelect').value;
+        document.getElementById('rowOtherCat').style.display = (val === "Other") ? "flex" : "none";
+        updateIllnessDropdown();
+    }
+
+    function handleIllnessChange() {
+        const val = document.getElementById('illnessSelect').value;
+        document.getElementById('rowOtherIll').style.display = (val === "Other") ? "flex" : "none";
+    }
+
+    function updateIllnessDropdown() {
+        const cat = document.getElementById('categorySelect').value;
+        const illSelect = document.getElementById('illnessSelect');
+        illSelect.innerHTML = '<option value="">-- Select Illness --</option>';
+        if (cat && medicalData[cat]) {
+            medicalData[cat].forEach(ill => illSelect.add(new Option(ill, ill)));
+            if (cat !== "Other") illSelect.add(new Option("Other", "Other"));
+        }
+    }
+
+    function runSpeech(id) {
+        const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+        if (!SpeechRecognition) return alert("Speech not supported");
+        const recognition = new SpeechRecognition();
+        const btn = event.currentTarget;
+        recognition.onstart = () => btn.classList.add('listening');
+        recognition.onend = () => btn.classList.remove('listening');
+        recognition.onresult = (e) => { document.getElementById(id).value = e.results[0][0].transcript; };
+        recognition.start();
+    }
+
+    async function saveAndShare() {
+        const vDate = document.getElementById('visitDate').value;
+        const dr = document.getElementById('drName').value;
+        let cat = document.getElementById('categorySelect').value;
+        let originalCat = cat;
+        if(cat === "Other") cat = document.getElementById('otherCategoryInput').value;
+        
+        let ill = document.getElementById('illnessSelect').value;
+        let originalIll = ill;
+        if(ill === "Other") ill = document.getElementById('otherIllnessInput').value;
+        
+        const med = document.getElementById('medicine').value;
+        const note = document.getElementById('notes').value;
+        const editIdx = parseInt(document.getElementById('editIndex').value);
+
+        if (!ill || !med) return alert("Fill Illness and Medicine.");
+
+        const visit = { 
+            date: vDate, doctor: dr, category: cat, illness: ill, medicine: med, notes: note,
+            metaCat: originalCat, metaIll: originalIll 
+        };
+
+        let visits = JSON.parse(localStorage.getItem('myVisits')) || [];
+        
+        if (editIdx > -1) {
+            visits[editIdx] = visit;
+        } else {
+            visits.push(visit);
+        }
+        
+        localStorage.setItem('myVisits', JSON.stringify(visits));
+
+        const captureArea = document.getElementById('captureArea');
+        captureArea.innerHTML = `<div class="visit-card" id="temp-card">
+            <div style="display:flex; justify-content:space-between;"><span style="font-weight:bold; color:#718096;">${vDate}</span><span class="tag">${cat}</span></div>
+            <h2 style="margin:10px 0; color:#2c3e50;">${ill}</h2>
+            <p><strong>Dr:</strong> ${dr}</p>
+            <p style="color:#27ae60;"><strong>Meds:</strong> ${med}</p>
+            <p style="font-size:13px; color:#718096; border-top:1px solid #eee; margin-top:10px; padding-top:10px;"><em>Notes: ${note}</em></p>
+        </div>`;
+
+        document.getElementById('syncStatus').innerText = "Processing...";
+        
+        try {
+            const canvas = await html2canvas(document.querySelector("#temp-card"), { scale: 2 });
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            const file = new File([blob], `HealthVisit_${vDate}.jpg`, { type: 'image/jpeg' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Medical Record' });
+            } else {
+                const link = document.createElement('a');
+                link.download = `HealthVisit_${vDate}.jpg`;
+                link.href = canvas.toDataURL("image/jpeg");
+                link.click();
+            }
+            document.getElementById('syncStatus').innerText = "✓ Record Saved";
+        } catch (err) { document.getElementById('syncStatus').innerText = "Saved to History"; }
+        
+        captureArea.innerHTML = ""; 
+        clearForm();
+        fetchHistory();
+    }
+
+    function editVisit(index) {
+        const visits = JSON.parse(localStorage.getItem('myVisits')) || [];
+        const v = visits[index];
+        
+        document.getElementById('editIndex').value = index;
+        document.getElementById('visitDate').value = v.date;
+        document.getElementById('drName').value = v.doctor;
+        document.getElementById('categorySelect').value = v.metaCat;
+        handleCategoryChange();
+        
+        if(v.metaCat === "Other") document.getElementById('otherCategoryInput').value = v.category;
+        
+        setTimeout(() => {
+            document.getElementById('illnessSelect').value = v.metaIll;
+            handleIllnessChange();
+            if(v.metaIll === "Other") document.getElementById('otherIllnessInput').value = v.illness;
+            document.getElementById('medicine').value = v.medicine;
+            document.getElementById('notes').value = v.notes;
+            document.getElementById('btnMain').innerText = "Update & Share 📤";
+            document.getElementById('mainForm').scrollIntoView({behavior: 'smooth'});
+        }, 100);
+    }
+
+    function deleteVisit(index) {
+        if(confirm("Are you sure you want to delete this record forever?")) {
+            let visits = JSON.parse(localStorage.getItem('myVisits')) || [];
+            visits.splice(index, 1);
+            localStorage.setItem('myVisits', JSON.stringify(visits));
+            fetchHistory();
+            document.getElementById('syncStatus').innerText = "Record Deleted";
+        }
+    }
+
+    function clearForm() {
+        document.getElementById('editIndex').value = "-1";
+        document.getElementById('drName').value = "";
+        document.getElementById('categorySelect').value = "";
+        document.getElementById('otherCategoryInput').value = "";
+        document.getElementById('illnessSelect').innerHTML = "";
+        document.getElementById('otherIllnessInput').value = "";
+        document.getElementById('medicine').value = "";
+        document.getElementById('notes').value = "";
+        document.getElementById('btnMain').innerText = "Save & Share 📤";
+        document.getElementById('rowOtherCat').style.display = "none";
+        document.getElementById('rowOtherIll').style.display = "none";
+    }
+
+    function filterHistory() {
+        const query = document.getElementById('searchBar').value.toLowerCase();
+        const cards = document.getElementsByClassName('visit-card');
+        Array.from(cards).forEach(card => {
+            card.style.display = card.innerText.toLowerCase().includes(query) ? "block" : "none";
+        });
+    }
+
+    function fetchHistory() {
+        const data = JSON.parse(localStorage.getItem('myVisits')) || [];
+        const historyDiv = document.getElementById('visitHistory');
+        historyDiv.innerHTML = data.map((v, index) => `
+            <div class="visit-card">
+                <div style="display:flex; justify-content:space-between;"><span style="font-weight:bold;">${v.date}</span><span class="tag">${v.category}</span></div>
+                <h4 style="margin:5px 0;">${v.illness}</h4>
+                <p style="margin:0; font-size:13px;"><strong>Dr:</strong> ${v.doctor}</p>
+                <p style="margin:5px 0 0 0; font-size:14px;"><strong>Meds:</strong> ${v.medicine}</p>
+                <div class="card-controls">
+                    <button class="control-btn edit-btn" onclick="editVisit(${index})">Edit ✏️</button>
+                    <button class="control-btn del-btn" onclick="deleteVisit(${index})">Delete 🗑️</button>
+                </div>
+            </div>`).reverse().join('');
+    }
+</script>
+</body>
+</html>
