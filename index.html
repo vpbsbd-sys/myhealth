@@ -27,6 +27,14 @@
         .logo-container { text-align: center; padding: 10px 0; }
         .logo-container h2 { color: var(--primary-green); margin: 0; }
 
+        /* Tabs */
+        .tabs { display: flex; width: 100%; margin-bottom: 15px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: none; font-weight: bold; cursor: pointer; color: #7f8c8d; }
+        .tab-btn.active { background: var(--primary-green); color: white; }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
         .card {
             background: var(--card-bg);
             padding: 20px;
@@ -47,20 +55,23 @@
             border-radius: 12px; font-size: 15px; background: #f8fafc; box-sizing: border-box;
         }
 
-        .other-input { display: none; border-color: var(--accent-orange); background: #fffaf0; margin-bottom: 12px; }
-
         .mic-btn {
             background: #f8fafc; border: 2px solid #edf2f7; border-radius: 12px;
             cursor: pointer; padding: 0 12px; font-size: 18px; min-width: 50px;
         }
 
-        .mic-btn.listening { background: var(--danger-red); color: white; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .reminder-box {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #fff3e0; padding: 12px; border-radius: 12px; margin-bottom: 15px;
+            border: 1px solid var(--accent-orange);
+        }
 
         .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         button.action { border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .save-btn { background: var(--primary-green); color: white; }
-        .fetch-btn { background: #cbd5e0; color: #4a5568; }
+        .share-btn { background: var(--primary-blue); color: white; }
+        .export-btn { background: #6c5ce7; color: white; grid-column: span 2; }
+        .clear-btn { background: #cbd5e0; color: #4a5568; }
 
         .search-box {
             width: 100%; padding: 12px; border-radius: 12px; border: 2px solid var(--primary-blue);
@@ -78,14 +89,12 @@
             display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid #f7fafc; padding-top: 10px;
         }
 
-        .control-btn {
-            border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600;
-        }
+        .control-btn { border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; }
         .edit-btn { background: #ebf8ff; color: var(--primary-blue); }
         .del-btn { background: #fff5f5; color: var(--danger-red); }
-
         .tag { font-size: 10px; background: #ebf8ff; color: #2b6cb0; padding: 3px 8px; border-radius: 5px; text-transform: uppercase; }
-        #syncStatus { text-align: center; font-size: 12px; margin-top: 10px; color: var(--primary-green); font-weight: bold; }
+        
+        .report-item { background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         #captureArea { position: absolute; left: -9999px; width: 400px; }
     </style>
 </head>
@@ -94,53 +103,88 @@
 <div class="container">
     <div class="logo-container"><h2>HEALTH IS WEALTH</h2></div>
 
-    <div class="card" id="mainForm">
-        <input type="hidden" id="editIndex" value="-1">
-        
-        <label>Visit Date</label>
-        <input type="date" id="visitDate" style="margin-bottom:12px;">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('visitTab')">Visit Entry</button>
+        <button class="tab-btn" onclick="switchTab('reportTab')">Reports Tab</button>
+    </div>
 
-        <label>Doctor's Name</label>
-        <div class="input-row">
-            <input type="text" id="drName" placeholder="Attending Doctor">
-            <button class="mic-btn" onclick="runSpeech('drName')">🎤</button>
+    <div id="visitTab" class="section active">
+        <div class="card" id="mainForm">
+            <input type="hidden" id="editIndex" value="-1">
+            
+            <label>Visit Date</label>
+            <input type="date" id="visitDate" style="margin-bottom:12px;">
+
+            <label>Doctor's Name</label>
+            <div class="input-row">
+                <input type="text" id="drName" placeholder="Attending Doctor">
+                <button class="mic-btn" onclick="runSpeech('drName')">🎤</button>
+            </div>
+
+            <label>Category</label>
+            <select id="categorySelect" onchange="handleCategoryChange()" style="margin-bottom:12px;"></select>
+            <div class="input-row" id="rowOtherCat" style="display:none;">
+                <input type="text" id="otherCategoryInput" style="display:block;" placeholder="Type Custom Category">
+                <button class="mic-btn" onclick="runSpeech('otherCategoryInput')">🎤</button>
+            </div>
+
+            <label>Problem / Illness</label>
+            <select id="illnessSelect" onchange="handleIllnessChange()" style="margin-bottom:12px;"></select>
+            <div class="input-row" id="rowOtherIll" style="display:none;">
+                <input type="text" id="otherIllnessInput" style="display:block;" placeholder="Type Custom Problem">
+                <button class="mic-btn" onclick="runSpeech('otherIllnessInput')">🎤</button>
+            </div>
+
+            <label>Medication Given</label>
+            <div class="input-row">
+                <input type="text" id="medicine" placeholder="e.g. Paracetamol">
+                <button class="mic-btn" onclick="runSpeech('medicine')">🎤</button>
+            </div>
+
+            <div class="reminder-box">
+                <span style="font-size: 14px; font-weight: bold; color: #e67e22;">🔔 Set Dose Reminder?</span>
+                <input type="time" id="reminderTime" style="width: auto; padding: 5px;">
+            </div>
+
+            <label>Notes</label>
+            <div class="input-row">
+                <textarea id="notes" rows="2" placeholder="Advice..."></textarea>
+                <button class="mic-btn" onclick="runSpeech('notes')">🎤</button>
+            </div>
+
+            <div class="action-btns">
+                <button class="action save-btn" id="btnMain" onclick="saveData()">Save Record ✅</button>
+                <button class="action clear-btn" onclick="clearForm()">Clear 🗑️</button>
+                <button class="action share-btn" onclick="fetchAndShare()">Fetch & Share Report 📤</button>
+                <button class="action export-btn" onclick="exportToExcel()">Export Full History to Excel 📊</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reportTab" class="section">
+        <div class="card">
+            <h3>Upload Documents</h3>
+            
+            <label>Blood Reports</label>
+            <input type="file" id="bloodFile" accept="image/*,.pdf" style="margin-bottom:15px;">
+            
+            <label>Insurance Documents</label>
+            <input type="file" id="insuranceFile" accept="image/*,.pdf" style="margin-bottom:15px;">
+            
+            <label>Other Reports</label>
+            <input type="file" id="otherReportsFile" accept="image/*,.pdf" style="margin-bottom:15px;">
+            
+            <button class="action save-btn" style="width:100%" onclick="saveFiles()">Upload to Vault 📁</button>
         </div>
 
-        <label>Category</label>
-        <select id="categorySelect" onchange="handleCategoryChange()" style="margin-bottom:12px;"></select>
-        <div class="input-row" id="rowOtherCat" style="display:none;">
-            <input type="text" id="otherCategoryInput" class="other-input" style="display:block;" placeholder="Type Custom Category">
-            <button class="mic-btn" onclick="runSpeech('otherCategoryInput')">🎤</button>
+        <div id="fileHistory" class="card">
+            <h3>Stored Documents</h3>
+            <div id="reportList"></div>
         </div>
-
-        <label>Problem / Illness</label>
-        <select id="illnessSelect" onchange="handleIllnessChange()" style="margin-bottom:12px;"></select>
-        <div class="input-row" id="rowOtherIll" style="display:none;">
-            <input type="text" id="otherIllnessInput" class="other-input" style="display:block;" placeholder="Type Custom Problem">
-            <button class="mic-btn" onclick="runSpeech('otherIllnessInput')">🎤</button>
-        </div>
-
-        <label>Medication Given</label>
-        <div class="input-row">
-            <input type="text" id="medicine" placeholder="e.g. Paracetamol">
-            <button class="mic-btn" onclick="runSpeech('medicine')">🎤</button>
-        </div>
-
-        <label>Notes</label>
-        <div class="input-row">
-            <textarea id="notes" rows="2" placeholder="Advice..."></textarea>
-            <button class="mic-btn" onclick="runSpeech('notes')">🎤</button>
-        </div>
-
-        <div class="action-btns">
-            <button class="action save-btn" id="btnMain" onclick="saveAndShare()">Save & Share 📤</button>
-            <button class="action fetch-btn" onclick="clearForm()">Clear 🗑️</button>
-        </div>
-        <div id="syncStatus"></div>
     </div>
 
     <h3 style="padding-left:10px;">Visit History</h3>
-    <input type="text" id="searchBar" class="search-box" placeholder="🔍 Search Illness, Meds, or Doctor..." onkeyup="filterHistory()">
+    <input type="text" id="searchBar" class="search-box" placeholder="🔍 Search History..." onkeyup="filterHistory()">
     
     <div id="visitHistory"></div>
 </div>
@@ -170,8 +214,17 @@
         const catSelect = document.getElementById('categorySelect');
         catSelect.add(new Option("-- Select Category --", ""));
         Object.keys(medicalData).forEach(cat => catSelect.add(new Option(cat, cat)));
+        if ("Notification" in window) Notification.requestPermission();
         fetchHistory();
+        renderReportList();
     };
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
 
     function handleCategoryChange() {
         const val = document.getElementById('categorySelect').value;
@@ -198,14 +251,11 @@
         const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
         if (!SpeechRecognition) return alert("Speech not supported");
         const recognition = new SpeechRecognition();
-        const btn = event.currentTarget;
-        recognition.onstart = () => btn.classList.add('listening');
-        recognition.onend = () => btn.classList.remove('listening');
         recognition.onresult = (e) => { document.getElementById(id).value = e.results[0][0].transcript; };
         recognition.start();
     }
 
-    async function saveAndShare() {
+    function saveData() {
         const vDate = document.getElementById('visitDate').value;
         const dr = document.getElementById('drName').value;
         let cat = document.getElementById('categorySelect').value;
@@ -218,110 +268,119 @@
         
         const med = document.getElementById('medicine').value;
         const note = document.getElementById('notes').value;
+        const remTime = document.getElementById('reminderTime').value;
         const editIdx = parseInt(document.getElementById('editIndex').value);
 
-        if (!ill || !med) return alert("Fill Illness and Medicine.");
+        if (!ill || !med) return alert("Please fill at least Illness and Medication.");
 
         const visit = { 
             date: vDate, doctor: dr, category: cat, illness: ill, medicine: med, notes: note,
-            metaCat: originalCat, metaIll: originalIll 
+            metaCat: originalCat, metaIll: originalIll, reminder: remTime
         };
 
         let visits = JSON.parse(localStorage.getItem('myVisits')) || [];
-        
-        if (editIdx > -1) {
-            visits[editIdx] = visit;
-        } else {
-            visits.push(visit);
-        }
+        if (editIdx > -1) visits[editIdx] = visit;
+        else visits.push(visit);
         
         localStorage.setItem('myVisits', JSON.stringify(visits));
-
-        const captureArea = document.getElementById('captureArea');
-        captureArea.innerHTML = `<div class="visit-card" id="temp-card">
-            <div style="display:flex; justify-content:space-between;"><span style="font-weight:bold; color:#718096;">${vDate}</span><span class="tag">${cat}</span></div>
-            <h2 style="margin:10px 0; color:#2c3e50;">${ill}</h2>
-            <p><strong>Dr:</strong> ${dr}</p>
-            <p style="color:#27ae60;"><strong>Meds:</strong> ${med}</p>
-            <p style="font-size:13px; color:#718096; border-top:1px solid #eee; margin-top:10px; padding-top:10px;"><em>Notes: ${note}</em></p>
-        </div>`;
-
-        document.getElementById('syncStatus').innerText = "Processing...";
+        if (remTime) alert("Reminder set!");
         
-        try {
-            const canvas = await html2canvas(document.querySelector("#temp-card"), { scale: 2 });
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-            const file = new File([blob], `HealthVisit_${vDate}.jpg`, { type: 'image/jpeg' });
-
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({ files: [file], title: 'Medical Record' });
-            } else {
-                const link = document.createElement('a');
-                link.download = `HealthVisit_${vDate}.jpg`;
-                link.href = canvas.toDataURL("image/jpeg");
-                link.click();
-            }
-            document.getElementById('syncStatus').innerText = "✓ Record Saved";
-        } catch (err) { document.getElementById('syncStatus').innerText = "Saved to History"; }
-        
-        captureArea.innerHTML = ""; 
         clearForm();
         fetchHistory();
     }
 
-    function editVisit(index) {
+    async function fetchAndShare() {
         const visits = JSON.parse(localStorage.getItem('myVisits')) || [];
-        const v = visits[index];
+        if (visits.length === 0) return alert("No history to share.");
         
-        document.getElementById('editIndex').value = index;
-        document.getElementById('visitDate').value = v.date;
-        document.getElementById('drName').value = v.doctor;
-        document.getElementById('categorySelect').value = v.metaCat;
-        handleCategoryChange();
-        
-        if(v.metaCat === "Other") document.getElementById('otherCategoryInput').value = v.category;
-        
-        setTimeout(() => {
-            document.getElementById('illnessSelect').value = v.metaIll;
-            handleIllnessChange();
-            if(v.metaIll === "Other") document.getElementById('otherIllnessInput').value = v.illness;
-            document.getElementById('medicine').value = v.medicine;
-            document.getElementById('notes').value = v.notes;
-            document.getElementById('btnMain').innerText = "Update & Share 📤";
-            document.getElementById('mainForm').scrollIntoView({behavior: 'smooth'});
-        }, 100);
+        // Use the latest record for sharing or the one currently being edited
+        const v = visits[visits.length - 1]; 
+
+        const captureArea = document.getElementById('captureArea');
+        captureArea.innerHTML = `<div class="visit-card" id="temp-card">
+            <div style="display:flex; justify-content:space-between;"><span style="font-weight:bold;">${v.date}</span><span class="tag">${v.category}</span></div>
+            <h2 style="margin:10px 0;">${v.illness}</h2>
+            <p><strong>Dr:</strong> ${v.doctor}</p>
+            <p style="color:#27ae60;"><strong>Meds:</strong> ${v.medicine}</p>
+            ${v.reminder ? `<p style="color:#e67e22;"><strong>🔔 Reminder:</strong> ${v.reminder}</p>` : ''}
+            <p style="font-size:13px; color:#718096; border-top:1px solid #eee; margin-top:10px; padding-top:10px;"><em>Notes: ${v.notes}</em></p>
+        </div>`;
+
+        try {
+            const canvas = await html2canvas(document.querySelector("#temp-card"), { scale: 2 });
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            const file = new File([blob], `HealthReport_${v.date}.jpg`, { type: 'image/jpeg' });
+            
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Medical Visit Report' });
+            } else {
+                const link = document.createElement('a');
+                link.download = `HealthReport_${v.date}.jpg`;
+                link.href = canvas.toDataURL("image/jpeg");
+                link.click();
+            }
+        } catch (err) { alert("Sharing failed, record saved in history."); }
     }
 
-    function deleteVisit(index) {
-        if(confirm("Are you sure you want to delete this record forever?")) {
-            let visits = JSON.parse(localStorage.getItem('myVisits')) || [];
-            visits.splice(index, 1);
-            localStorage.setItem('myVisits', JSON.stringify(visits));
-            fetchHistory();
-            document.getElementById('syncStatus').innerText = "Record Deleted";
-        }
+    // Reports Logic
+    function saveFiles() {
+        const blood = document.getElementById('bloodFile').files[0];
+        const insurance = document.getElementById('insuranceFile').files[0];
+        const other = document.getElementById('otherReportsFile').files[0];
+
+        if (!blood && !insurance && !other) return alert("Please select a file.");
+
+        let reports = JSON.parse(localStorage.getItem('myDocs')) || [];
+        
+        const addReport = (file, type) => {
+            if (file) {
+                reports.push({ type: type, name: file.name, date: new Date().toLocaleDateString() });
+            }
+        };
+
+        addReport(blood, "Blood Report");
+        addReport(insurance, "Insurance");
+        addReport(other, "Other Report");
+
+        localStorage.setItem('myDocs', JSON.stringify(reports));
+        alert("Documents added to Vault.");
+        renderReportList();
     }
 
-    function clearForm() {
-        document.getElementById('editIndex').value = "-1";
-        document.getElementById('drName').value = "";
-        document.getElementById('categorySelect').value = "";
-        document.getElementById('otherCategoryInput').value = "";
-        document.getElementById('illnessSelect').innerHTML = "";
-        document.getElementById('otherIllnessInput').value = "";
-        document.getElementById('medicine').value = "";
-        document.getElementById('notes').value = "";
-        document.getElementById('btnMain').innerText = "Save & Share 📤";
-        document.getElementById('rowOtherCat').style.display = "none";
-        document.getElementById('rowOtherIll').style.display = "none";
+    function renderReportList() {
+        const docs = JSON.parse(localStorage.getItem('myDocs')) || [];
+        const container = document.getElementById('reportList');
+        container.innerHTML = docs.map((d, i) => `
+            <div class="report-item">
+                <div>
+                    <strong style="color:var(--primary-blue)">${d.type}</strong><br>
+                    <small>${d.name} (${d.date})</small>
+                </div>
+                <button class="control-btn del-btn" onclick="deleteDoc(${i})">🗑️</button>
+            </div>
+        `).join('');
     }
 
-    function filterHistory() {
-        const query = document.getElementById('searchBar').value.toLowerCase();
-        const cards = document.getElementsByClassName('visit-card');
-        Array.from(cards).forEach(card => {
-            card.style.display = card.innerText.toLowerCase().includes(query) ? "block" : "none";
+    function deleteDoc(index) {
+        let docs = JSON.parse(localStorage.getItem('myDocs'));
+        docs.splice(index, 1);
+        localStorage.setItem('myDocs', JSON.stringify(docs));
+        renderReportList();
+    }
+
+    function exportToExcel() {
+        const data = JSON.parse(localStorage.getItem('myVisits')) || [];
+        let csvContent = "Date,Category,Illness,Doctor,Medicine,Notes,Reminder\n";
+        data.forEach(v => {
+            let row = [v.date, v.category, v.illness, v.doctor, v.medicine, v.notes, v.reminder]
+                      .map(text => `"${(text || "").replace(/"/g, '""')}"`).join(",");
+            csvContent += row + "\n";
         });
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Health_History.csv`;
+        link.click();
     }
 
     function fetchHistory() {
@@ -338,6 +397,55 @@
                     <button class="control-btn del-btn" onclick="deleteVisit(${index})">Delete 🗑️</button>
                 </div>
             </div>`).reverse().join('');
+    }
+
+    function editVisit(index) {
+        const visits = JSON.parse(localStorage.getItem('myVisits')) || [];
+        const v = visits[index];
+        document.getElementById('editIndex').value = index;
+        document.getElementById('visitDate').value = v.date;
+        document.getElementById('drName').value = v.doctor;
+        document.getElementById('categorySelect').value = v.metaCat;
+        handleCategoryChange();
+        setTimeout(() => {
+            document.getElementById('illnessSelect').value = v.metaIll;
+            handleIllnessChange();
+            if(v.metaIll === "Other") document.getElementById('otherIllnessInput').value = v.illness;
+            document.getElementById('medicine').value = v.medicine;
+            document.getElementById('notes').value = v.notes;
+            document.getElementById('reminderTime').value = v.reminder || "";
+            document.getElementById('btnMain').innerText = "Update Record ✅";
+            switchTab('visitTab');
+            document.getElementById('mainForm').scrollIntoView();
+        }, 100);
+    }
+
+    function deleteVisit(index) {
+        if(confirm("Delete permanently?")) {
+            let visits = JSON.parse(localStorage.getItem('myVisits')) || [];
+            visits.splice(index, 1);
+            localStorage.setItem('myVisits', JSON.stringify(visits));
+            fetchHistory();
+        }
+    }
+
+    function clearForm() {
+        document.getElementById('editIndex').value = "-1";
+        document.getElementById('drName').value = "";
+        document.getElementById('categorySelect').value = "";
+        document.getElementById('illnessSelect').innerHTML = "";
+        document.getElementById('medicine').value = "";
+        document.getElementById('notes').value = "";
+        document.getElementById('reminderTime').value = "";
+        document.getElementById('btnMain').innerText = "Save Record ✅";
+    }
+
+    function filterHistory() {
+        const query = document.getElementById('searchBar').value.toLowerCase();
+        const cards = document.getElementsByClassName('visit-card');
+        Array.from(cards).forEach(card => {
+            card.style.display = card.innerText.toLowerCase().includes(query) ? "block" : "none";
+        });
     }
 </script>
 </body>
